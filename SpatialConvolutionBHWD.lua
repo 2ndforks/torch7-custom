@@ -1,10 +1,10 @@
-local SpatialConvolution, parent = torch.class('nxn.SpatialConvolution', 'nxn.Module')
+local SpatialConvolutionBHWD, parent = torch.class('nn.SpatialConvolutionBHWD', 'nn.Module')
 
 local help_str = 
 [[This is the primary spatial convolution module.
 It performs a 2D convolution with nOutputPlane 3D kernels of size (kW*kH*nInputPlane).
 
-Usage : m = nxn.SpatialConvolution(nInputPlane, nOutputPlane, kW, kH, dW, dH, padleft, padright, padtop, padbottom)
+Usage : m = nn.SpatialConvolutionBHWD(nInputPlane, nOutputPlane, kW, kH, dW, dH, padleft, padright, padtop, padbottom)
 - nInputPlane is the number of input planes.
 - nOutputPlane is the number of output planes.
 - kW/kH is the kernel width/height.
@@ -33,7 +33,7 @@ Backprop :
 (To do stuff manually : set learning rate to a positive value and override updateParameters() for your training loop.)]]
 
 
-function SpatialConvolution:__init(nInputPlane, nOutputPlane, kW, kH, dW, dH, padleft, padright, padtop, padbottom)
+function SpatialConvolutionBHWD:__init(nInputPlane, nOutputPlane, kW, kH, dW, dH, padleft, padright, padtop, padbottom)
    parent.__init(self)
 
    dW = dW or 1
@@ -84,7 +84,7 @@ end
 
 
 
-function SpatialConvolution:reset(stdv)
+function SpatialConvolutionBHWD:reset(stdv)
    --
    -- resets weights according to gaussian (0,stdv) distribution
    --
@@ -109,7 +109,7 @@ end
 -- "trivial" switch is a non-return point, which makes sense (no padding, 1x1 kernels, no stride)
 --
 
-function SpatialConvolution:switchToFC()
+function SpatialConvolutionBHWD:switchToFC()
    if self.mode=='fc' then return end
    if self.mode=='conv' then 
       self.mode='fc'
@@ -117,7 +117,7 @@ function SpatialConvolution:switchToFC()
    end
 end
 
-function SpatialConvolution:switchToConv()
+function SpatialConvolutionBHWD:switchToConv()
    if self.mode=='conv' then return end
    if self.mode=='fc' then 
       self.mode='conv'
@@ -125,7 +125,7 @@ function SpatialConvolution:switchToConv()
    end
 end
 
-function SpatialConvolution:switchToTrivial()
+function SpatialConvolutionBHWD:switchToTrivial()
    if self.mode=='trivial' then return end
    assert(self.kH==1 and self.kW==1 and self.dH==1 and self.dW==1)
    self.weight=self.weight:contiguous()
@@ -135,7 +135,7 @@ function SpatialConvolution:switchToTrivial()
    self.mode='trivial' -- no-return point.
 end
 
-function SpatialConvolution:optimize(input)
+function SpatialConvolutionBHWD:optimize(input)
 -- switches the module to optimize computation :
 -- - case 1 : kernels are 1x1 : perform linear transform of features
 -- - case 2 : kernels are same size as input : perform fully-connected linear transform
@@ -178,7 +178,7 @@ end
 -- 3 functions to update outputs
 --
 
-function SpatialConvolution:updateOutputTrivial(input)
+function SpatialConvolutionBHWD:updateOutputTrivial(input)
    -- input is flattened (view)
    local tinput=input.new()
    tinput:set(input:storage(), 1, torch.LongStorage{input:size(1)*input:size(2)*input:size(3), input:stride(3)})
@@ -196,7 +196,7 @@ function SpatialConvolution:updateOutputTrivial(input)
 --   print('updateOutputTrivial')
 end
 
-function SpatialConvolution:updateOutputFC(input)
+function SpatialConvolutionBHWD:updateOutputFC(input)
    -- input is flattened (view)
    local tinput=input.new()
    tinput:set(input:storage(), 1, torch.LongStorage{input:size(1), input:stride(1)})
@@ -213,13 +213,13 @@ function SpatialConvolution:updateOutputFC(input)
 --   print('updateOutputFC')
 end
 
-function SpatialConvolution:updateOutputConv(input)
-   input.nxn.SpatialConvolution_updateOutput(self, input)
+function SpatialConvolutionBHWD:updateOutputConv(input)
+   input.nn.SpatialConvolutionBHWD_updateOutput(self, input)
 --   print('updateOutputConv')
 end
 
 
-function SpatialConvolution:updateOutput(input)
+function SpatialConvolutionBHWD:updateOutput(input)
    --
    -- find the best computation mode and run it to update outputs
    --
@@ -242,7 +242,7 @@ end
 --
 
 
-function SpatialConvolution:updateGradInputTrivial(input, gradOutput)
+function SpatialConvolutionBHWD:updateGradInputTrivial(input, gradOutput)
    -- gradOutput is flattened (view)
    local tgradOutput=gradOutput.new()
    tgradOutput:set(gradOutput:storage(), 1, torch.LongStorage{gradOutput:size(1)*gradOutput:size(2)*gradOutput:size(3), gradOutput:stride(3)})
@@ -265,7 +265,7 @@ function SpatialConvolution:updateGradInputTrivial(input, gradOutput)
    
 end
 
-function SpatialConvolution:updateGradInputFC(input, gradOutput)
+function SpatialConvolutionBHWD:updateGradInputFC(input, gradOutput)
    -- gradOutput is flattened (view)
    local tgradOutput=gradOutput.new()
    tgradOutput:set(gradOutput:storage(), 1, torch.LongStorage{gradOutput:size(1), gradOutput:stride(1)})
@@ -288,11 +288,11 @@ function SpatialConvolution:updateGradInputFC(input, gradOutput)
 
 end
 
-function SpatialConvolution:updateGradInputConv(input, gradOutput)
-   input.nxn.SpatialConvolution_updateGradInput(self, input, gradOutput)
+function SpatialConvolutionBHWD:updateGradInputConv(input, gradOutput)
+   input.nn.SpatialConvolutionBHWD_updateGradInput(self, input, gradOutput)
 end
 
-function SpatialConvolution:updateGradInput(input, gradOutput)
+function SpatialConvolutionBHWD:updateGradInput(input, gradOutput)
    --
    -- find the best computation mode and run it to update gradients
    --
@@ -313,12 +313,12 @@ end
 
 -- update weight gradients
 
-function SpatialConvolution:zeroGradParameters()
+function SpatialConvolutionBHWD:zeroGradParameters()
    self.gradWeight:zero()
    self.gradBias:zero()
 end
 
-function SpatialConvolution:accGradParametersTrivial(input, gradOutput, scale)
+function SpatialConvolutionBHWD:accGradParametersTrivial(input, gradOutput, scale)
    -- input is flattened (view)
    local tinput=input.new()
    tinput:set(input:storage(), 1, torch.LongStorage{input:size(1)*input:size(2)*input:size(3), input:stride(3)})
@@ -331,7 +331,7 @@ function SpatialConvolution:accGradParametersTrivial(input, gradOutput, scale)
       
 end
 
-function SpatialConvolution:accGradParametersFC(input, gradOutput, scale)
+function SpatialConvolutionBHWD:accGradParametersFC(input, gradOutput, scale)
    -- input is flattened (view)
    local tinput=input.new()
    tinput:set(input:storage(), 1, torch.LongStorage{input:size(1), input:stride(1)})
@@ -349,11 +349,11 @@ function SpatialConvolution:accGradParametersFC(input, gradOutput, scale)
 
 end
 
-function SpatialConvolution:accGradParametersConv(input, gradOutput, scale)
-   input.nxn.SpatialConvolution_accGradParameters(self, input, gradOutput, scale) 
+function SpatialConvolutionBHWD:accGradParametersConv(input, gradOutput, scale)
+   input.nn.SpatialConvolutionBHWD_accGradParameters(self, input, gradOutput, scale) 
 end
 
-function SpatialConvolution:accGradParameters(input, gradOutput, scale)
+function SpatialConvolutionBHWD:accGradParameters(input, gradOutput, scale)
    --
    -- find the best computation mode and run it to update gradients, if the module is learning
    -- rescale by dividing by the number of examples in the batch
@@ -380,7 +380,7 @@ end
 
 
 
-function SpatialConvolution:setLearningRate(lr)
+function SpatialConvolutionBHWD:setLearningRate(lr)
    -- set manual or zero learning rates (adagrad rates will be purged)
    if lr > 0 or lr==0 then
       self.learningRate=lr
@@ -399,7 +399,7 @@ end
 
 
 
-function SpatialConvolution:setMomentum(mom)
+function SpatialConvolutionBHWD:setMomentum(mom)
    if mom > 0 or mom==0 then
       self.momentum=mom
    else
@@ -407,7 +407,7 @@ function SpatialConvolution:setMomentum(mom)
    end
 end
 
-function SpatialConvolution:applyMomentum()
+function SpatialConvolutionBHWD:applyMomentum()
    self.gradWeight:mul(self.momentum)
    self.gradBias:mul(self.momentum)
 end
@@ -415,7 +415,7 @@ end
 
 
 
-function SpatialConvolution:setWeightDecay(wd)
+function SpatialConvolutionBHWD:setWeightDecay(wd)
    if wd > 0 or wd==0 then
       self.weightDecay=wd
    else
@@ -423,7 +423,7 @@ function SpatialConvolution:setWeightDecay(wd)
    end
 end
 
-function SpatialConvolution:applyWeightDecay()
+function SpatialConvolutionBHWD:applyWeightDecay()
    self.gradWeight:add(self.weightDecay, self.weight)
    self.gradBias:add(self.weightDecay, self.bias)
 end
@@ -435,7 +435,7 @@ end
 
 
 
-function nxn.SpatialConvolution:autoLR(masterLR, sensitivity)
+function SpatialConvolutionBHWD:autoLR(masterLR, sensitivity)
    --
    -- activate adagrad following the formula : lr(x_{i,t}) = masterLR / (sqrt (1e-10 + sensitivity * sum_{t-1}(g_{i,t}^2) ) ) 
    --
@@ -444,7 +444,7 @@ function nxn.SpatialConvolution:autoLR(masterLR, sensitivity)
    self.adaptiveLR=true
 end
 
-function nxn.SpatialConvolution:computeRates()
+function nn.SpatialConvolutionBHWD:computeRates()
    -- or : second boolean is not checked if first is true (it would crash at :dim() call otherwise)
    if (not self.adaRateWeight) or self.adaRateWeight:dim()==0 then -- init
       self.adaRateWeight=self.weight.new(#self.weight):zero()
@@ -476,7 +476,7 @@ end
 
 
 
-function SpatialConvolution:updateParameters()
+function SpatialConvolutionBHWD:updateParameters()
    --
    -- update the parameters using adagrad (or not)
    --
@@ -501,12 +501,12 @@ end
 
 
 
-function SpatialConvolution:needGradients()
+function SpatialConvolutionBHWD:needGradients()
    -- return whether the module needs gradients itself or not (used for memory optimization)
    return (self.learningRate > 0 or self.adaptiveLR)
 end
 
-function SpatialConvolution:getDisposableTensors()
+function SpatialConvolutionBHWD:getDisposableTensors()
    -- this is used to purge the unnecessary tensors after usage (used for memory optimization)
    local t = {}
    table.insert(t, self.output)
@@ -525,7 +525,7 @@ end
 
 
 
---SpatialConvolution:__init(nInputPlane, nOutputPlane, kW, kH, dW, dH, padleft, padright, padtop, padbottom)
+--SpatialConvolutionBHWD:__init(nInputPlane, nOutputPlane, kW, kH, dW, dH, padleft, padright, padtop, padbottom)
 
 local function tensorsizestring(t)
    local str = t:type() .. ' - '
@@ -540,11 +540,11 @@ local function tensorsizestring(t)
    return str
 end
 
-function nxn.SpatialConvolution:__tostring__()
+function SpatialConvolutionBHWD:__tostring__()
    local tab = '     |  '
    local line = '\n'
    local next = ' -> '
-   local str = 'nxn.SpatialConvolution('
+   local str = 'nn.SpatialConvolutionBHWD('
    str = str .. self.nInputPlane ..', '
    str = str .. self.nOutputPlane ..', '
    str = str .. self.kW ..', '
@@ -576,7 +576,7 @@ end
 
 -- clip the weights (this is for later)
 
-function SpatialConvolution:clipWeights(normbound)
+function SpatialConvolutionBHWD:clipWeights(normbound)
    for idx=1,self.nOutputPlane do
       local filternorm=self.weight:select(2,idx):norm()
       if filternorm > normbound then
@@ -585,8 +585,8 @@ function SpatialConvolution:clipWeights(normbound)
    end
 end
 
-function SpatialConvolution:clipWeights(normbound)
-   self.weight.nxn.SpatialConvolution_clipWeights(self, normbound)
+function SpatialConvolutionBHWD:clipWeights(normbound)
+   self.weight.nn.SpatialConvolutionBHWD_clipWeights(self, normbound)
 end
 
 

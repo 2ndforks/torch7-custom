@@ -1,5 +1,5 @@
 #ifndef TH_GENERIC_FILE
-#define TH_GENERIC_FILE "generic/SpatialConvolution.c"
+#define TH_GENERIC_FILE "generic/SpatialConvolutionBHWD.c"
 #else
 
 #ifndef assert
@@ -25,11 +25,11 @@
 
 
 /* -------------------------------------- */
-/* Torch nxn wrappers                     */
+/* Torch nn wrappers                     */
 /* -------------------------------------- */
 
 
-static int nxn_(SpatialConvolution_updateOutput)(lua_State *L)
+static int nn_(SpatialConvolutionBHWD_updateOutput)(lua_State *L)
 {
   THTensor *input = luaT_checkudata(L, 2, torch_Tensor);
 
@@ -239,7 +239,7 @@ int it1;
 }
 
 
-static int nxn_(SpatialConvolution_updateGradInput)(lua_State *L)
+static int nn_(SpatialConvolutionBHWD_updateGradInput)(lua_State *L)
 {
 #if 0
   THTensor *input = luaT_checkudata(L, 2, torch_Tensor);
@@ -639,7 +639,7 @@ THTensor_(resizeAs)(gradInput, input);
 }
 
 
-static int nxn_(SpatialConvolution_accGradParameters)(lua_State *L)
+static int nn_(SpatialConvolutionBHWD_accGradParameters)(lua_State *L)
 {
   THTensor *input = luaT_checkudata(L, 2, torch_Tensor);
   THTensor *gradOutput = luaT_checkudata(L, 3, torch_Tensor);
@@ -860,7 +860,7 @@ static int nxn_(SpatialConvolution_accGradParameters)(lua_State *L)
   
 }
 
-static int nxn_(SpatialConvolution_clipWeights)(lua_State *L)
+static int nn_(SpatialConvolutionBHWD_clipWeights)(lua_State *L)
 {
   real normbound = luaL_optnumber(L, 2, 1);
   THTensor *weight = luaT_getfieldcheckudata(L, 1, "weight", torch_Tensor);
@@ -916,18 +916,18 @@ static int nxn_(SpatialConvolution_clipWeights)(lua_State *L)
 }
 
 
-static const struct luaL_Reg nxn_(SpatialConvolution__) [] = {
-  {"SpatialConvolution_updateOutput", nxn_(SpatialConvolution_updateOutput)},
-  {"SpatialConvolution_updateGradInput", nxn_(SpatialConvolution_updateGradInput)},
-  {"SpatialConvolution_accGradParameters", nxn_(SpatialConvolution_accGradParameters)},
-  {"SpatialConvolution_clipWeights", nxn_(SpatialConvolution_clipWeights)},
+static const struct luaL_Reg nn_(SpatialConvolutionBHWD__) [] = {
+  {"SpatialConvolutionBHWD_updateOutput", nn_(SpatialConvolutionBHWD_updateOutput)},
+  {"SpatialConvolutionBHWD_updateGradInput", nn_(SpatialConvolutionBHWD_updateGradInput)},
+  {"SpatialConvolutionBHWD_accGradParameters", nn_(SpatialConvolutionBHWD_accGradParameters)},
+  {"SpatialConvolutionBHWD_clipWeights", nn_(SpatialConvolutionBHWD_clipWeights)},
   {NULL, NULL}
 };
 
-static void nxn_(SpatialConvolution_init)(lua_State *L)
+static void nn_(SpatialConvolutionBHWD_init)(lua_State *L)
 {
   luaT_pushmetatable(L, torch_Tensor);
-  luaT_registeratname(L, nxn_(SpatialConvolution__), "nxn");
+  luaT_registeratname(L, nn_(SpatialConvolutionBHWD__), "nn");
   lua_pop(L,1);
 }
 
